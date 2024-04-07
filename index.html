@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>WebSocket Client</title>
+	</head>
+	<body>
+		<main>
+			<h1>WebSocket Client</h1>
+			<div id="output"></div>
+		</main>
+
+		<script>
+			// each patients data will be stored in this array or array{timestamp, value}
+			let patientsData = [];
+			let currentPatientData = [];
+
+			function autoGroupPacketsByTime(packets, time) {
+				let groupedPackets = [];
+				let currentGroup = [];
+				let lastPacketTime = 0;
+
+				packets.forEach((packet) => {
+					const packetTime = packet.time;
+					if (packetTime - lastPacketTime > time) {
+						groupedPackets.push(currentGroup);
+						currentGroup = [];
+					}
+					currentGroup.push(packet);
+					lastPacketTime = packetTime;
+				});
+				if (currentGroup.length > 0) {
+					groupedPackets.push(currentGroup);
+				}
+				return groupedPackets;
+			}
+
+			const output = document.getElementById("output");
+
+			// Establish WebSocket connection
+			const socket = new WebSocket("ws://localhost:2001");
+
+			// WebSocket onopen event listener
+			socket.addEventListener("open", function (event) {
+				output.innerHTML += "<p>WebSocket connection established.</p>";
+                currentPatientData = [];
+			});
+
+			// WebSocket onmessage event listener
+			socket.addEventListener("message", function (event) {
+                const packetConverted = {
+                    time: Date.now(),
+                    value: JSON.parse(event.data)
+                }
+
+				currentPatientData.push(packetConverted);
+                output.innerHTML += `<p>Received: ${packetConverted.time} - ${packetConverted.value}</p>`;
+			});
+
+			// WebSocket onclose event listener
+			socket.addEventListener("close", function (event) {
+				output.innerHTML += "<p>WebSocket connection closed.</p>";
+                patientsData.push(currentPatientData);
+			});
+		</script>
+	</body>
+
+	<style>
+		main {
+			width: 100%;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			flex-direction: column;
+		}
+
+		body {
+			font-family: Arial, sans-serif;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+			background-color: #f0f0f0;
+		}
+
+		h1 {
+			text-align: center;
+			margin-bottom: 20px;
+		}
+
+		#output {
+			width: 50%;
+			padding: 20px;
+			border: 1px solid #ccc;
+			border-radius: 5px;
+			background-color: #fff;
+		}
+
+		p {
+			margin: 0;
+		}
+	</style>
+</html>
